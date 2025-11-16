@@ -1,0 +1,505 @@
+/* ==================== SOCKET.IO LOBBY ==================== */
+const socket = io();
+let roomId = null;
+let isMyTurn = false;
+
+/* ---- UI ---- */
+document.getElementById('createBtn').onclick = () => socket.emit('createRoom');
+document.getElementById('showJoin').onclick = () => {
+  document.getElementById('joinSection').style.display = 'block';
+  document.getElementById('createBtn').style.display = 'none';
+  document.getElementById('showJoin').style.display = 'none';
+};
+document.getElementById('joinBtn').onclick = () => {
+  const code = document.getElementById('codeInput').value.trim().toUpperCase();
+  if (code) socket.emit('joinRoom', code);
+};
+
+/* ---- SERVER RESPONSES ---- */
+socket.on('roomCreated', id => {
+  roomId = id;
+  document.getElementById('roomCode').innerHTML = `Code: <b>${id}</b><br>Share with friend!`;
+});
+
+socket.on('roomJoined', id => {
+  roomId = id;
+});
+
+socket.on('error', msg => alert(msg));
+socket.on('opponentLeft', () => {
+  alert('Opponent left! Returning to lobby...');
+  location.reload();
+});
+
+socket.on('gameStart', ({ youAreFirst }) => {
+  isMyTurn = youAreFirst;
+  myTurn = youAreFirst;
+  document.getElementById('lobby').style.display = 'none';
+  document.getElementById('game').style.display = 'block';
+  window.startOnlineGame();  // Now global
+  showMessage(youAreFirst ? "ZAMUU YAKO!" : "Subiri mpinzani...", youAreFirst ? "#0f0" : "#ff0");
+});
+
+/* ---- MOVE RELAY ---- */
+function sendMove(move) {
+  if (!roomId || !isMyTurn) return;
+  socket.emit('move', { roomId, move });
+}
+
+/* ---- GLOBAL: OPPONENT MOVE HANDLER ---- */
+function handleOpponentMove(move) {
+  if (move.type === 'drop') {
+    const cards = move.cards.map(c => ({ suit: c.suit, num: c.num, float: false, ready: false }));
+    window.originalDropCards(cards, false);
+  } else if (move.type === 'pick') {
+    window.originalPickCards(move.num, false);
+  }
+}
+socket.on('opponentMove', handleOpponentMove);
+
+/* ==================== FULL KADI 254 GAME LOGIC ==================== */
+(() => {
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+  const scoreEl = document.getElementById("score");
+  const cardsCountEl = document.getElementById("cardsCount");
+  const messageEl = document.getElementById("message");
+  const hintEl = document.getElementById("hint");
+  const winScreen = document.getElementById("winScreen");
+  const winText = document.getElementById("winText");
+
+  let CARD_W = 120, CARD_H = 174;
+  let DECK_X, DECK_Y, TOPCARD_X, TOPCARD_Y, USER_Y, OPP_Y;
+  let BUTTON_X, BUTTON_Y, BUTTON_W = 100, BUTTON_H = 40;
+
+  let playerScore = 0, computerScore = 0;
+
+  const deckScatterOffsets = [
+    { x: 0, y: 0, rot: 0 },
+    { x: 12, y: 8, rot: -0.15 },
+    { x: -8, y: 15, rot: 0.12 },
+    { x: 18, y: -5, rot: -0.08 },
+    { x: -15, y: 22, rot: 0.2 },
+  ];
+  const playedPileOffsets = [
+    { x: 0, y: 0, rot: 0.05 },
+    { x: -18, y: 12, rot: -0.22 },
+    { x: 25, y: -8, rot: 0.18 },
+    { x: -12, y: 25, rot: -0.15 },
+    { x: 20, y: 15, rot: 0.25 },
+  ];
+
+  function resize() {
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+    CARD_W = Math.min(innerWidth * 0.09, 65);
+    CARD_H = CARD_W * 1.45;
+    DECK_X = canvas.width * 0.2 - CARD_W * 1.2;
+    DECK_Y = canvas.height * 0.5 - CARD_H * 0.5;
+    TOPCARD_X = canvas.width * 0.5 - CARD_W * 0.5;
+    TOPCARD_Y = canvas.height * 0.5 - CARD_H * 0.5;
+    USER_Y = canvas.height - CARD_H - 20;
+    OPP_Y = 20;
+    BUTTON_X = canvas.width - 130;
+    BUTTON_Y = 20;
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  const deckBack = new Image(); deckBack.src = "images/back_side.png";
+  const oppBack = new Image(); oppBack.src = "images/back_side.png";
+  const suits = ["clubs", "diamonds", "hearts", "spades"];
+  const cardImages = {};
+  for (let s = 0; s < 4; s++) {
+    for (let n = 0; n < 13; n++) {
+      const imgNum = n===0?"1":n===9?"10":n===10?"11":n===11?"12":n===12?"13":`${n+1}`;
+      const img = new Image();
+      img.src = `images/${imgNum}_of_${suits[s]}.png`;
+      cardImages[`${n}_${s}`] = img;
+    }
+  }
+
+  let gameState = "loading";
+  let animationCards = [], animationProgress = 0, animationTimer = 0, dealCounter = 0;
+  let allCards = [], userCards = [], opponentCards = [], staleCards = [], topCard = null;
+  let recentPlayedCards = [];
+  let myTurn = false, shouldEat = false, gameDone = false, isAnimating = false, gameReady = false;
+  let dragCard = null;
+
+  function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+  function playSound(id){try{document.getElementById(id).currentTime=0;document.getElementById(id).play();}catch(e){}}
+  function vibrate(){navigator.vibrate?.([150,80,150]);}
+  function updateScore(){
+    scoreEl.innerHTML = `<span style="color:#ff0">Mpinzani: ${computerScore}</span> | <span style="color:#0f0">Wewe: ${playerScore}</span>`;
+    cardsCountEl.innerHTML = `K: ${opponentCards.length} | M: ${userCards.length}`;
+  }
+  function showMessage(txt,color="#0f0",time=0){
+    messageEl.textContent=txt;
+    messageEl.style.borderColor=color;
+    if(time>0){clearTimeout(window.msgTimeout);window.msgTimeout=setTimeout(()=>{messageEl.textContent="";},time);}
+  }
+  function showHint(show=true){
+    if(show && myTurn && !gameDone && gameState==="ready") hintEl.classList.add("show");
+    else hintEl.classList.remove("show");
+  }
+
+  function drawCard(card,x,y,scale=1,glow=false,angle=0,isBack=false){
+    ctx.save();
+    ctx.translate(x+(CARD_W*scale)/2,y+(CARD_H*scale)/2);
+    ctx.rotate(angle);
+    if(glow){ctx.shadowColor="#00ffff";ctx.shadowBlur=80;}
+    const img = isBack?oppBack:cardImages[`${card.num}_${card.suit}`]||oppBack;
+    try{ctx.drawImage(img,(-CARD_W*scale)/2,(-CARD_H*scale)/2,CARD_W*scale,CARD_H*scale);}
+    catch(e){ctx.fillStyle="#333";ctx.fillRect((-CARD_W*scale)/2,(-CARD_H*scale)/2,CARD_W*scale,CARD_H*scale);}
+    ctx.restore();
+  }
+  function drawScatteredDeck(x,y){
+    ctx.shadowColor="#00ff00";ctx.shadowBlur=25;ctx.shadowOffsetY=10;
+    deckScatterOffsets.forEach((offset,i)=>{
+      const drawX=x+offset.x, drawY=y+offset.y, scale=0.95-i*0.03;
+      ctx.save();ctx.translate(drawX+(CARD_W*scale)/2,drawY+(CARD_H*scale)/2);ctx.rotate(offset.rot);
+      ctx.drawImage(deckBack,-(CARD_W*scale)/2,-(CARD_H*scale)/2,CARD_W*scale,CARD_H*scale);
+      ctx.restore();
+    });
+  }
+  function drawRecentPlayed(){
+    if(!recentPlayedCards.length) return;
+    const numToShow=Math.min(recentPlayedCards.length,5);
+    const recent=recentPlayedCards.slice(-numToShow);
+    const baseX=TOPCARD_X, baseY=TOPCARD_Y;
+    recent.forEach((card,i)=>{
+      const offset=playedPileOffsets[i];
+      const drawX=baseX+offset.x, drawY=baseY+offset.y, scale=1.0-i*0.04;
+      ctx.save();ctx.translate(drawX+(CARD_W*scale)/2,drawY+(CARD_H*scale)/2);ctx.rotate(offset.rot);
+      ctx.shadowColor="rgba(0,0,0,0.6)";ctx.shadowBlur=15;ctx.shadowOffsetX=5;ctx.shadowOffsetY=8;
+      ctx.drawImage(cardImages[`${card.num}_${card.suit}`]||oppBack,-(CARD_W*scale)/2,-(CARD_H*scale)/2,CARD_W*scale,CARD_H*scale);
+      ctx.restore();
+    });
+  }
+  function drawFan(cards,baseY,isUser=true){
+    if(!cards.length) return;
+    const spacing=CARD_W*0.7;
+    const totalW=(cards.length-1)*spacing+CARD_W;
+    const startX=(canvas.width-totalW)/2;
+    const inKadi=isUser&&cards.length===1&&canFinish(cards[0]);
+    for(let i=0;i<cards.length;i++){
+      const card=cards[i];
+      const x=startX+i*spacing;
+      const dy=isUser?(card.float?-35:0)+(card.ready?-50:0):0;
+      const angle=(i-(cards.length-1)/2)*(isUser?0.1:-0.08);
+      const scale=isUser?1.0:0.85;
+      if(inKadi){
+        const pulse=Math.sin(Date.now()/300)*0.5+0.5;
+        ctx.shadowColor=`rgba(255,${Math.floor(pulse*100)},0,${0.8+pulse*0.2})`;
+        ctx.shadowBlur=50+pulse*30;
+      }else{
+        ctx.shadowColor=card.ready?"#00ffff":"rgba(0,255,255,0.5)";
+        ctx.shadowBlur=card.ready?70:30;
+      }
+      ctx.shadowOffsetY=15;
+      drawCard(card,x,baseY+dy,scale,card.ready||inKadi,angle,!isUser);
+    }
+  }
+
+  function updateAnimation() {
+    animationTimer++;
+    animationProgress += 0.05;
+
+    if (gameState === "reshuffling") {
+      animationCards.forEach(c => {
+        c.x += c.dx; c.y += c.dy; c.rot += c.drot;
+        c.dx *= 0.97; c.dy *= 0.97; c.drot *= 0.97;
+      });
+    }
+
+    else if (gameState === "dealing") {
+      if (dealCounter < 8) {
+        const isUser = dealCounter % 2 === 0;
+        const card = allCards.pop();
+        if (card) {
+          card.x = DECK_X + CARD_W / 2;
+          card.y = DECK_Y + CARD_H / 2;
+          card.targetX = (isUser ? userCards.length : opponentCards.length) * CARD_W * 0.55 + (canvas.width - 8 * CARD_W * 0.55) / 2;
+          card.targetY = isUser ? USER_Y : OPP_Y;
+          card.progress = 0;
+          animationCards.push(card);
+          if (isUser) userCards.push(card);
+          else opponentCards.push(card);
+        }
+        dealCounter++;
+      }
+      else if (animationCards.length > 0 && animationCards.every(c => c.progress >= 1)) {
+        animationCards = [];
+        topCard = allCards.pop();
+        if (topCard) {
+          topCard.x = TOPCARD_X;
+          topCard.y = TOPCARD_Y;
+        }
+        gameState = "ready";
+        gameReady = true;
+        myTurn = isMyTurn;
+        showMessage(myTurn ? "ZAMUU YAKO!" : "Subiri mpinzani...", myTurn ? "#0f0" : "#ff0");
+      }
+      else {
+        animationCards.forEach(c => {
+          c.progress = Math.min(c.progress + 0.08, 1);
+          const ease = 1 - Math.pow(1 - c.progress, 3);
+          c.x = c.x + (c.targetX - c.x) * ease;
+          c.y = c.y + (c.targetY - c.y) * ease;
+        });
+      }
+    }
+  }
+
+  function draw(){
+    updateAnimation();
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle="#001a00"; ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    if (gameState === "reshuffling" || gameState === "dealing") {
+      drawScatteredDeck(DECK_X, DECK_Y);
+      animationCards.forEach(c => drawCard(c, c.x - CARD_W/2, c.y - CARD_H/2, 1, false, Math.sin(animationTimer * 0.1) * 0.1));
+    }
+
+    if (gameState === "ready" || gameState === "dealing") {
+      drawFan(opponentCards, OPP_Y, false);
+      drawFan(userCards, USER_Y, true);
+    }
+
+    if (gameState === "ready") {
+      drawRecentPlayed();
+      if (topCard) {
+        ctx.shadowColor="#ffff00"; ctx.shadowBlur=80; ctx.shadowOffsetY=15;
+        drawCard(topCard, TOPCARD_X, TOPCARD_Y, 1.15, true);
+      }
+    }
+
+    if (isAnimating && window.animCards) {
+      const progress = Math.min(window.animStep / 30, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      const dx = window.animToX - window.animFromX;
+      const dy = window.animToY - window.animFromY;
+      window.animCards.forEach((c, i) => {
+        const offsetX = i * 10 * (window.animIsUser ? 1 : -1);
+        const offsetY = i * -5;
+        const x = window.animFromX + dx * ease + offsetX * (1 - ease);
+        const y = window.animFromY + dy * ease + offsetY * (1 - ease);
+        drawCard(c, x, y, 1, true, ease * 0.3);
+      });
+      window.animStep++;
+      if (progress >= 1) isAnimating = false;
+    }
+
+    ctx.fillStyle = gameState === "ready" ? "#0f0" : "#888";
+    ctx.fillRect(BUTTON_X, BUTTON_Y, BUTTON_W, BUTTON_H);
+    ctx.fillStyle = "#000"; ctx.font = "bold 20px Poppins"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("Restart", BUTTON_X + BUTTON_W/2, BUTTON_Y + BUTTON_H/2);
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+
+    updateScore(); showHint();
+    requestAnimationFrame(draw);
+  }
+
+  function startGame() {
+    playSound("shuffle");
+    allCards = []; userCards = []; opponentCards = []; staleCards = []; topCard = null; recentPlayedCards = [];
+    gameState = "reshuffling";
+    animationProgress = 0; animationTimer = 0; dealCounter = 0; isAnimating = true;
+    gameDone = false; gameReady = false; myTurn = isMyTurn; shouldEat = false;
+    winScreen.classList.remove("show");
+
+    for (let s = 0; s < 4; s++) {
+      for (let n = 0; n < 13; n++) {
+        allCards.push({ suit: s, num: n });
+      }
+    }
+    shuffle(allCards);
+
+    animationCards = [];
+    for (let i = 0; i < 10; i++) {
+      animationCards.push({
+        x: DECK_X + CARD_W / 2,
+        y: DECK_Y + CARD_H / 2,
+        dx: (Math.random() - 0.5) * 8,
+        dy: (Math.random() - 0.5) * 8,
+        rot: (Math.random() - 0.5) * Math.PI,
+        drot: (Math.random() - 0.5) * 0.08,
+      });
+    }
+
+    setTimeout(() => {
+      gameState = "dealing";
+      animationCards = [];
+      dealCounter = 0;
+      animationProgress = 0;
+    }, 1000);
+  }
+
+  function dropCards(cards, isUser){
+    if(!isValid(topCard,cards,shouldEat)){playSound("badmove");vibrate();showMessage("HAPANA! Si halali!","#f00",3000);userCards.forEach(c=>c.ready=false);return;}
+    isAnimating=true; window.animCards=cards.map(c=>({...c})); window.animIsUser=isUser;
+    const arr=isUser?userCards:opponentCards;
+    const firstIdx=arr.findIndex(c=>c.suit===cards[0].suit&&c.num===cards[0].num);
+    const spacing=CARD_W*0.55; const totalW=(arr.length-1)*spacing+CARD_W;
+    const startX=(canvas.width-totalW)/2;
+    window.animFromX=startX+firstIdx*spacing; window.animFromY=isUser?USER_Y:OPP_Y;
+    window.animToX=TOPCARD_X; window.animToY=TOPCARD_Y; window.animStep=0;
+    playSound("throw"); showMessage(isUser?"Poa sana!":"Mpinzani ametupa!","#0f0");
+    setTimeout(()=>{
+      if(topCard) recentPlayedCards.push(topCard);
+      cards.forEach(c=>recentPlayedCards.push(c)); recentPlayedCards=recentPlayedCards.slice(-5);
+      staleCards.push(topCard,...cards.slice(0,-1));
+      topCard=cards[cards.length-1];
+      if(isUser){userCards=userCards.filter(c=>!cards.some(dc=>dc.suit===c.suit&&dc.num===c.num));userCards.forEach(c=>{c.ready=false;c.float=false;});}
+      else opponentCards=opponentCards.filter(c=>!cards.some(dc=>dc.suit===c.suit&&dc.num===c.num));
+      const feeder=[1,2].includes(topCard.num);
+      if(isQuestion(topCard)){showMessage("FUNIKA HII KADI!","#ff0");}
+      else if(feeder){showMessage(topCard.num===1?"KULA 2!":"KULA 3!","#f00");shouldEat=true;myTurn=!isUser;}
+      else{shouldEat=false;myTurn=!isUser;showMessage(myTurn?"Zamuu yako!":"Mpinzani anacheza...",myTurn?"#0f0":"#ff0",2000);}
+      checkGameOver(); isAnimating=false;
+    },900);
+  }
+
+  function pickCards(num,isUser){
+    if(isAnimating||gameState!=="ready") return;
+    isAnimating=true; window.animCards=[];
+    for(let i=0;i<num&&allCards.length>0;i++) window.animCards.push(allCards.pop());
+    const spacing=CARD_W*0.55;
+    const totalW=((isUser?userCards.length:opponentCards.length)+num-1)*spacing+CARD_W;
+    const startX=(canvas.width-totalW)/2;
+    const base=isUser?userCards.length:opponentCards.length;
+    window.animFromX=DECK_X; window.animFromY=DECK_Y;
+    window.animToX=startX+base*spacing; window.animToY=isUser?USER_Y:OPP_Y;
+    window.animStep=0; playSound("pick");
+    showMessage(isUser?"Umechukua!":"Mpinzani anachukua","#fff");
+    setTimeout(()=>{
+      if(isUser) userCards.push(...window.animCards.map(c=>({...c,float:false,ready:false})));
+      else opponentCards.push(...window.animCards.map(c=>({...c})));
+      isAnimating=false; shouldEat=false; myTurn=!isUser;
+      messageEl.textContent=""; showMessage(myTurn?"Zamuu yako!":"Subiri kidogo...",myTurn?"#0f0":"#ff0",2000);
+      checkGameOver();
+    },900);
+  }
+
+  function isQuestion(card){return [7,10,11,12].includes(card.num);}
+  function canFinish(card){return ![0,1,2,7,10,11,12].includes(card.num);}
+  function isValid(top,cards,eat){
+    if(!cards.length) return false;
+    let prev=top;
+    for(let i=0;i<cards.length;i++){
+      const c=cards[i], first=i===0;
+      if(eat){
+        if(first){if(c.num!==prev.num && c.num!==0) return false;}
+        else if(c.num!==prev.num) return false;
+      }else if(!first){
+        if(isQuestion(prev)){
+          if(!(c.suit===prev.suit||c.num===prev.num||c.num===0)) return false;
+        }else if(c.num!==prev.num) return false;
+      }else if(!(c.suit===prev.suit||c.num===prev.num||c.num===0)) return false;
+      prev=c;
+    }
+    return true;
+  }
+
+  function checkGameOver(){
+    if(userCards.length===0&&canFinish(topCard)&&opponentCards.length>0){
+      playerScore++; winText.textContent="UMESHINDA!!!"; winText.style.color="#0f0";
+      winScreen.classList.add("show"); confetti({particleCount:600,spread:140,origin:{y:0.55}});
+      playSound("win"); gameDone=true; updateScore();
+    }
+    if(opponentCards.length===0&&canFinish(topCard)&&userCards.length>0){
+      computerScore++; winText.textContent="MPINZANI AMESHINDA!"; winText.style.color="#f00";
+      winScreen.classList.add("show"); gameDone=true; updateScore();
+    }
+  }
+
+  function getHit(x,y){
+    const spacing=CARD_W*0.7;
+    const totalW=(userCards.length-1)*spacing+CARD_W;
+    const startX=(canvas.width-totalW)/2;
+    for(let i=userCards.length-1;i>=0;i--){
+      const card=userCards[i];
+      const cx=startX+i*spacing;
+      const dy=(card.float?-35:0)+(card.ready?-50:0);
+      const left=cx+CARD_W*0.1, right=cx+CARD_W*0.9;
+      if(x>left&&x<right&&y>USER_Y+dy-60&&y<USER_Y+dy+CARD_H+60) return {type:"user",idx:i};
+    }
+    if(x>DECK_X-30&&x<DECK_X+CARD_W+30&&y>DECK_Y-30&&y<DECK_Y+CARD_H+30) return {type:"deck"};
+    if(x>canvas.width*0.3&&x<canvas.width*0.7&&y>canvas.height*0.3&&y<canvas.height*0.7) return {type:"top"};
+    if(x>BUTTON_X&&x<BUTTON_X+BUTTON_W&&y>BUTTON_Y&&y<BUTTON_Y+BUTTON_H) return {type:"restart"};
+    return null;
+  }
+  function getInputXY(e){
+    const rect=canvas.getBoundingClientRect();
+    const clientX = e.touches?e.touches[0].clientX:e.clientX;
+    const clientY = e.touches?e.touches[0].clientY:e.clientY;
+    return {x:(clientX-rect.left)*(canvas.width/rect.width), y:(clientY-rect.top)*(canvas.height/rect.height)};
+  }
+  function handleStart(x,y){
+    if(!myTurn||isAnimating||gameDone||gameState!=="ready") return;
+    const hit=getHit(x,y);
+    if(hit?.type==="user"){
+      dragCard={card:userCards[hit.idx],idx:hit.idx,x:x-CARD_W/2,y:y-CARD_H/2};
+      userCards[hit.idx].float=true;
+    }
+  }
+  function handleMove(x,y){
+    if(!dragCard) return;
+    dragCard.x=x-CARD_W/2; dragCard.y=y-CARD_H/2;
+  }
+  function handleEnd(x,y){
+    const hit=getHit(x,y);
+    if(hit?.type==="restart"){startGame();return;}
+    if(!myTurn||isAnimating||gameDone||gameState!=="ready") return;
+    if(hit?.type==="deck"){
+      const num=shouldEat?(topCard.num===1?2:3):1;
+      pickCards(num,true);
+      userCards.forEach(c=>c.float=false); dragCard=null; return;
+    }
+    if(hit?.type==="top"){
+      const ready=userCards.filter(c=>c.ready);
+      if(ready.length>0) dropCards(ready.map(c=>({suit:c.suit,num:c.num})),true);
+      else showMessage("Chagua kadi ya kutupa!","#ff0");
+      userCards.forEach(c=>c.float=false); dragCard=null; return;
+    }
+    if(dragCard){
+      const dx=x-(dragCard.x+CARD_W/2);
+      if(Math.abs(dx)>70){
+        const dir=dx>0?1:-1;
+        const newIdx=dragCard.idx+dir;
+        if(newIdx>=0&&newIdx<userCards.length) [userCards[dragCard.idx],userCards[newIdx]]=[userCards[newIdx],userCards[dragCard.idx]];
+      }else userCards[dragCard.idx].ready=!userCards[dragCard.idx].ready;
+    }
+    userCards.forEach(c=>c.float=false); dragCard=null;
+  }
+
+ canvas.addEventListener("touchstart",e=>{e.preventDefault();const p=getInputXY(e);handleStart(p.x,p.y);},{passive:false});
+  canvas.addEventListener("touchmove",e=>{e.preventDefault();const p=getInputXY(e);handleMove(p.x,p.y);},{passive:false});
+  canvas.addEventListener("touchend",e=>{e.preventDefault();const p=getInputXY(e);handleEnd(p.x,p.y);},{passive:false});
+  canvas.addEventListener("mousedown",e=>{e.preventDefault();const p=getInputXY(e);handleStart(p.x,p.y);});
+  canvas.addEventListener("mousemove",e=>{const p=getInputXY(e);handleMove(p.x,p.y);});
+  canvas.addEventListener("mouseup",e=>{const p=getInputXY(e);handleEnd(p.x,p.y);});
+
+  /* ----- ONLINE WRAPPERS (NO startOnlineGame or handleOpponentMove HERE) ----- */
+  const originalDropCards = dropCards;
+  const originalPickCards = pickCards;
+
+  dropCards = function(cards, isUser) {
+    if (!isUser) return originalDropCards.apply(this, arguments);
+    sendMove({ type: 'drop', cards: cards.map(c => ({ suit: c.suit, num: c.num })) });
+    originalDropCards.call(this, cards, true);
+  };
+
+  pickCards = function(num, isUser) {
+    if (!isUser) return originalPickCards.apply(this, arguments);
+    sendMove({ type: 'pick', num });
+    originalPickCards.call(this, num, true);
+  };
+
+  let loaded = 0;
+  const expected = Object.keys(cardImages).length + 2;
+  function imgLoaded(){ loaded++; if(loaded>=expected){ resize(); requestAnimationFrame(draw); } }
+  deckBack.onload=imgLoaded; oppBack.onload=imgLoaded;
+  Object.values(cardImages).forEach(img=>img.onload=imgLoaded);
+  setTimeout(()=>{ if(gameState==="loading"){ resize(); requestAnimationFrame(draw); } },1500);
+})();

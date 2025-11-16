@@ -278,12 +278,8 @@
           <span>📱 BLUETOOTH <span class="badge">SOON</span></span>
         </button>
 
-        <button
-          class="game-btn btn-online"
-          onclick="startOnlineGame()"
-          disabled
-        >
-          <span>🌐 ONLINE PLAYER <span class="badge">SOON</span></span>
+        <button class="game-btn btn-online" onclick="startOnlineGame()">
+          <span>🌐 ONLINE PLAYER </span>
         </button>
       </div>
     </div>
@@ -302,8 +298,7 @@
       }
 
       function startOnlineGame() {
-        // TODO: Implement Online game
-        alert("Online multiplayer coming soon! 🌐");
+        window.location.href = "game-online.html";
       }
     </script>
   </body>

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="sw">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>KADI 254 - VS Computer</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@700;900&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background: #000;
+        font-family: "Poppins", sans-serif;
+        overflow: hidden;
+        height: 100vh;
+        color: #fff;
+        touch-action: none;
+      }
+      canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
+      }
+      #info {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        z-index: 100;
+        background: rgba(0, 0, 0, 0.85);
+        padding: 10px 18px;
+        border-radius: 15px;
+        border: 3px solid #0f0;
+        box-shadow: 0 0 25px rgba(0, 255, 0, 0.6);
+        font-family: "Bangers", cursive;
+        font-size: 1.6rem;
+      }
+
+      #cardsInfo {
+        position: absolute;
+        bottom: 15px;
+        left: 15px;
+        z-index: 100;
+        background: rgba(0, 0, 0, 0.75);
+        padding: 8px 15px;
+        border-radius: 12px;
+        border: 2px solid #0ff;
+        font-family: "Poppins", sans-serif;
+        font-size: 0.9rem;
+        color: #0ff;
+      }
+
+      @media (max-width: 768px) {
+        #info {
+          font-size: 1.3rem;
+          padding: 8px 15px;
+        }
+        #cardsInfo {
+          font-size: 0.8rem;
+          padding: 6px 12px;
+        }
+      }
+      #message {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 150;
+        background: rgba(0, 0, 0, 0.95);
+        padding: 12px 30px;
+        border-radius: 20px;
+        border: 4px solid #ff0;
+        font-family: "Bangers", cursive;
+        font-size: 1.8rem;
+        text-align: center;
+        animation: pop 0.4s;
+        pointer-events: none;
+        box-shadow: 0 0 40px rgba(255, 255, 0, 0.8);
+        max-width: 300px;
+      }
+
+      @media (max-width: 768px) {
+        #message {
+          top: 80px;
+          right: 10px;
+          left: 10px;
+          font-size: 1.4rem;
+          padding: 10px 20px;
+          max-width: none;
+        }
+      }
+      #hint {
+        position: absolute;
+        bottom: 15px;
+        left: 15px;
+        z-index: 100;
+        background: rgba(0, 0, 0, 0.9);
+        padding: 8px 16px;
+        border-radius: 12px;
+        border: 2px solid #0ff;
+        font-family: "Poppins", sans-serif;
+        font-size: 0.85rem;
+        color: #0ff;
+        text-align: left;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+        max-width: 250px;
+      }
+      #hint.show {
+        opacity: 1;
+      }
+
+      @media (max-width: 768px) {
+        #hint {
+          font-size: 0.75rem;
+          padding: 6px 12px;
+          max-width: 200px;
+        }
+      }
+      @keyframes pop {
+        0% {
+          opacity: 0;
+          transform: scale(0.8);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+      #winScreen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.98);
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+      #winScreen.show {
+        display: flex;
+      }
+      #winText {
+        font-family: "Bangers", cursive;
+        font-size: 6rem;
+        text-shadow: 0 0 40px #0f0;
+        margin-bottom: 40px;
+      }
+      .playAgain {
+        padding: 25px 90px;
+        font-size: 2.3rem;
+        background: #0f0;
+        color: #000;
+        border: none;
+        border-radius: 60px;
+        cursor: pointer;
+        font-weight: 900;
+        font-family: "Poppins", sans-serif;
+        transition: all 0.3s ease;
+      }
+      .playAgain:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 40px #0f0;
+      }
+      .backHome {
+        margin-top: 20px;
+        padding: 15px 50px;
+        font-size: 1.5rem;
+        background: transparent;
+        color: #fff;
+        border: 3px solid #fff;
+        border-radius: 40px;
+        cursor: pointer;
+        font-weight: 700;
+        font-family: "Poppins", sans-serif;
+        transition: all 0.3s ease;
+      }
+      .backHome:hover {
+        background: #fff;
+        color: #000;
+      }
+      @media (max-width: 768px) {
+        #winText {
+          font-size: 3.5rem;
+        }
+        .playAgain {
+          padding: 20px 60px;
+          font-size: 1.8rem;
+        }
+        .backHome {
+          padding: 12px 40px;
+          font-size: 1.2rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+    <div id="info">
+      <div id="score">Kompyuta: 0 | Wewe: 0</div>
+    </div>
+    <div id="cardsInfo">
+      <div id="cardsCount">K: 4 | M: 4</div>
+    </div>
+    <div id="message"></div>
+    <div id="hint">Tap kadi nyingi! Bonyeza top card kutupa!</div>
+    <div id="winScreen">
+      <div id="winText">UMESHINDA!</div>
+      <button class="playAgain" onclick="startGame()">CHEZA TENA</button>
+      <button class="backHome" onclick="goHome()">RUDI HOME</button>
+    </div>
+
+    <!-- Audio Elements -->
+    <audio id="shuffle" src="sounds/shuffle.ogg" preload="auto"></audio>
+    <audio id="pick" src="sounds/pick.ogg" preload="auto"></audio>
+    <audio id="throw" src="sounds/throw.ogg" preload="auto"></audio>
+    <audio id="badmove" src="sounds/badmove.ogg" preload="auto"></audio>
+    <audio
+      id="win"
+      src="https://assets.mixkit.co/sfx/preview/mixkit-triumphant-game-winning-575.mp3"
+      preload="auto"
+    ></audio>
+
+    <!-- External JavaScript -->
+    <script src="game-ai.js"></script>
+
+    <!-- Navigation Function -->
+    <script>
+      function goHome() {
+        window.location.href = "index.html";
+      }
+    </script>
+  </body>
+</html>
