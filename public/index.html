@@ -1,43 +1,310 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sw">
   <head>
-    <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
+    <meta charset="UTF-8" />
     <meta
-      name="description"
-      content="Web site created using create-react-app"
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <!--
-      Notice the use of %PUBLIC_URL% in the tags above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
+    <title>KADI 254 - STREET KING</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@400;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
-    -->
-    <title>React App</title>
+      body {
+        background: linear-gradient(
+          135deg,
+          #000000 0%,
+          #1a1a1a 50%,
+          #000000 100%
+        );
+        font-family: "Poppins", sans-serif;
+        overflow: hidden;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+      }
+
+      /* Animated background cards */
+      .bg-cards {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        opacity: 0.1;
+        z-index: 0;
+      }
+
+      .floating-card {
+        position: absolute;
+        font-size: 4rem;
+        animation: float 20s infinite;
+        opacity: 0.3;
+      }
+
+      @keyframes float {
+        0%,
+        100% {
+          transform: translateY(0) rotate(0deg);
+        }
+        50% {
+          transform: translateY(-100px) rotate(180deg);
+        }
+      }
+
+      .container {
+        text-align: center;
+        z-index: 10;
+        max-width: 600px;
+        padding: 20px;
+      }
+
+      .logo {
+        font-family: "Bangers", cursive;
+        font-size: clamp(3rem, 10vw, 7rem);
+        color: #0f0;
+        text-shadow: 0 0 20px #0f0, 0 0 40px #0f0, 0 0 60px #0f0,
+          0 0 80px #00ff00, 0 5px 10px rgba(0, 0, 0, 0.8);
+        margin-bottom: 10px;
+        animation: pulse 2s ease-in-out infinite;
+        letter-spacing: 8px;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          text-shadow: 0 0 20px #0f0, 0 0 40px #0f0, 0 0 60px #0f0,
+            0 5px 10px rgba(0, 0, 0, 0.8);
+        }
+        50% {
+          text-shadow: 0 0 30px #0f0, 0 0 60px #0f0, 0 0 90px #0f0,
+            0 0 120px #00ff00, 0 5px 15px rgba(0, 0, 0, 0.8);
+        }
+      }
+
+      .subtitle {
+        font-family: "Bangers", cursive;
+        font-size: clamp(1.2rem, 4vw, 2rem);
+        color: #ff0;
+        text-shadow: 0 0 10px #ff0, 0 2px 5px rgba(0, 0, 0, 0.8);
+        margin-bottom: 60px;
+        letter-spacing: 3px;
+      }
+
+      .buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+        align-items: center;
+      }
+
+      .game-btn {
+        width: 100%;
+        max-width: 400px;
+        padding: 25px 50px;
+        font-family: "Poppins", sans-serif;
+        font-size: clamp(1.2rem, 3vw, 1.8rem);
+        font-weight: 900;
+        border: none;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      }
+
+      .game-btn::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        transform: translate(-50%, -50%);
+        transition: width 0.6s, height 0.6s;
+      }
+
+      .game-btn:hover::before {
+        width: 400px;
+        height: 400px;
+      }
+
+      .game-btn span {
+        position: relative;
+        z-index: 1;
+      }
+
+      .btn-ai {
+        background: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);
+        color: #000;
+      }
+
+      .btn-ai:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0 40px #0f0, 0 15px 40px rgba(0, 0, 0, 0.6);
+      }
+
+      .btn-bluetooth {
+        background: linear-gradient(135deg, #0099ff 0%, #0066cc 100%);
+        color: #fff;
+      }
+
+      .btn-bluetooth:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0 40px #0099ff, 0 15px 40px rgba(0, 0, 0, 0.6);
+      }
+
+      .btn-bluetooth:disabled {
+        background: linear-gradient(135deg, #666 0%, #444 100%);
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+
+      .btn-online {
+        background: linear-gradient(135deg, #ff00ff 0%, #cc00cc 100%);
+        color: #fff;
+      }
+
+      .btn-online:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0 40px #ff00ff, 0 15px 40px rgba(0, 0, 0, 0.6);
+      }
+
+      .btn-online:disabled {
+        background: linear-gradient(135deg, #666 0%, #444 100%);
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+
+      .badge {
+        display: inline-block;
+        background: #ff0;
+        color: #000;
+        padding: 2px 8px;
+        border-radius: 5px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        margin-left: 10px;
+        vertical-align: middle;
+      }
+
+      .footer {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #666;
+        font-size: 0.9rem;
+        z-index: 10;
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          padding: 20px 15px;
+        }
+
+        .buttons {
+          gap: 20px;
+        }
+
+        .game-btn {
+          padding: 20px 40px;
+        }
+      }
+    </style>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
+    <div class="bg-cards">
+      <div
+        class="floating-card"
+        style="left: 10%; top: 20%; animation-delay: 0s"
+      >
+        ♠️
+      </div>
+      <div
+        class="floating-card"
+        style="left: 80%; top: 30%; animation-delay: 2s"
+      >
+        ♥️
+      </div>
+      <div
+        class="floating-card"
+        style="left: 20%; top: 70%; animation-delay: 4s"
+      >
+        ♣️
+      </div>
+      <div
+        class="floating-card"
+        style="left: 70%; top: 60%; animation-delay: 6s"
+      >
+        ♦️
+      </div>
+      <div
+        class="floating-card"
+        style="left: 50%; top: 10%; animation-delay: 3s"
+      >
+        🃏
+      </div>
+    </div>
 
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
+    <div class="container">
+      <h1 class="logo">KADI 254</h1>
+      <p class="subtitle">STREET KING</p>
 
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
+      <div class="buttons">
+        <button class="game-btn btn-ai" onclick="startAIGame()">
+          <span>🤖 VS COMPUTER</span>
+        </button>
+
+        <button
+          class="game-btn btn-bluetooth"
+          onclick="startBluetoothGame()"
+          disabled
+        >
+          <span>📱 BLUETOOTH <span class="badge">SOON</span></span>
+        </button>
+
+        <button
+          class="game-btn btn-online"
+          onclick="startOnlineGame()"
+          disabled
+        >
+          <span>🌐 ONLINE PLAYER <span class="badge">SOON</span></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="footer">© 2024 KADI 254 - Nairobi Streets Edition</div>
+
+    <script>
+      function startAIGame() {
+        // Navigate to AI game page
+        window.location.href = "game-ai.html";
+      }
+
+      function startBluetoothGame() {
+        // TODO: Implement Bluetooth game
+        alert("Bluetooth mode coming soon! 📱");
+      }
+
+      function startOnlineGame() {
+        // TODO: Implement Online game
+        alert("Online multiplayer coming soon! 🌐");
+      }
+    </script>
   </body>
 </html>
