@@ -1,12 +1,16 @@
-// src/index.js
+// src/App.js
 import React from 'react';
-import ReactDOM from 'react-dom/client';
 import Gaming from './gaming/Gaming';
-import './index.css';
+import './App.css';
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(
-  <React.StrictMode>
-    <Gaming />
-  </React.StrictMode>
-);
+function App() {
+  return (
+    <Router>
+      <div className="App">
+        <Gaming/>
+      </div>
+    </Router>
+  );
+}
+
+export default App;
