@@ -129,7 +129,7 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.REACT_BASE_URL || 3001;
 server.listen(PORT, '0.0.0.0', () => {
   console.log('='.repeat(70));
   console.log('KADI 254 ONLINE – 100% FAIR, NO CHEATING, FULLY HIDDEN CARDS!');
