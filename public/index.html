@@ -6,1203 +6,300 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>KADI 254 - Online</title>
-
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <title>KADI 254 - STREET KING</title>
     <link
-      href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@700;900&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Bangers&family=Poppins:wght@400;700;900&display=swap"
       rel="stylesheet"
     />
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
-
     <style>
       * {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
       }
+
       body {
-        background: #000;
+        background: linear-gradient(
+          135deg,
+          #000000 0%,
+          #1a1a1a 50%,
+          #000000 100%
+        );
         font-family: "Poppins", sans-serif;
         overflow: hidden;
         height: 100vh;
-        color: #fff;
-        touch-action: none;
-      }
-      #lobby,
-      #game {
-        width: 100%;
-        height: 100%;
-        position: absolute;
-        top: 0;
-        left: 0;
-      }
-      #lobby {
-        background: linear-gradient(135deg, #000, #1a1a1a);
-        color: #0f0;
         display: flex;
-        flex-direction: column;
         justify-content: center;
         align-items: center;
-        gap: 20px;
-        text-align: center;
+        position: relative;
       }
-      #lobby h1 {
-        font-family: "Bangers";
+
+      /* Animated background cards */
+      .bg-cards {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        opacity: 0.1;
+        z-index: 0;
+      }
+
+      .floating-card {
+        position: absolute;
         font-size: 4rem;
+        animation: float 20s infinite;
+        opacity: 0.3;
+      }
+
+      @keyframes float {
+        0%,
+        100% {
+          transform: translateY(0) rotate(0deg);
+        }
+        50% {
+          transform: translateY(-100px) rotate(180deg);
+        }
+      }
+
+      .container {
+        text-align: center;
+        z-index: 10;
+        max-width: 600px;
+        padding: 20px;
+      }
+
+      .logo {
+        font-family: "Bangers", cursive;
+        font-size: clamp(3rem, 10vw, 7rem);
         color: #0f0;
-        text-shadow: 0 0 20px #0f0;
+        text-shadow: 0 0 20px #0f0, 0 0 40px #0f0, 0 0 60px #0f0,
+          0 0 80px #00ff00, 0 5px 10px rgba(0, 0, 0, 0.8);
+        margin-bottom: 10px;
+        animation: pulse 2s ease-in-out infinite;
+        letter-spacing: 8px;
       }
-      .btn {
-        padding: 15px 40px;
-        font-size: 1.5rem;
-        background: #0f0;
-        color: #000;
-        border: none;
-        border-radius: 50px;
-        cursor: pointer;
+
+      @keyframes pulse {
+        0%,
+        100% {
+          text-shadow: 0 0 20px #0f0, 0 0 40px #0f0, 0 0 60px #0f0,
+            0 5px 10px rgba(0, 0, 0, 0.8);
+        }
+        50% {
+          text-shadow: 0 0 30px #0f0, 0 0 60px #0f0, 0 0 90px #0f0,
+            0 0 120px #00ff00, 0 5px 15px rgba(0, 0, 0, 0.8);
+        }
+      }
+
+      .subtitle {
+        font-family: "Bangers", cursive;
+        font-size: clamp(1.2rem, 4vw, 2rem);
+        color: #ff0;
+        text-shadow: 0 0 10px #ff0, 0 2px 5px rgba(0, 0, 0, 0.8);
+        margin-bottom: 60px;
+        letter-spacing: 3px;
+      }
+
+      .buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+        align-items: center;
+      }
+
+      .game-btn {
+        width: 100%;
+        max-width: 400px;
+        padding: 25px 50px;
+        font-family: "Poppins", sans-serif;
+        font-size: clamp(1.2rem, 3vw, 1.8rem);
         font-weight: 900;
-        transition: all 0.3s;
+        border: none;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
       }
-      .btn:hover {
-        transform: scale(1.05);
-        box-shadow: 0 0 30px #0f0;
+
+      .game-btn::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        transform: translate(-50%, -50%);
+        transition: width 0.6s, height 0.6s;
       }
-      #showJoin {
+
+      .game-btn:hover::before {
+        width: 400px;
+        height: 400px;
+      }
+
+      .game-btn span {
+        position: relative;
+        z-index: 1;
+      }
+
+      .btn-ai {
+        background: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);
+        color: #000;
+      }
+
+      .btn-ai:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0 40px #0f0, 0 15px 40px rgba(0, 0, 0, 0.6);
+      }
+
+      .btn-bluetooth {
+        background: linear-gradient(135deg, #0099ff 0%, #0066cc 100%);
+        color: #fff;
+      }
+
+      .btn-bluetooth:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0 40px #0099ff, 0 15px 40px rgba(0, 0, 0, 0.6);
+      }
+
+      .btn-bluetooth:disabled {
+        background: linear-gradient(135deg, #666 0%, #444 100%);
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+
+      .btn-online {
+        background: linear-gradient(135deg, #ff00ff 0%, #cc00cc 100%);
+        color: #fff;
+      }
+
+      .btn-online:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0 40px #ff00ff, 0 15px 40px rgba(0, 0, 0, 0.6);
+      }
+
+      .btn-online:disabled {
+        background: linear-gradient(135deg, #666 0%, #444 100%);
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+
+      .badge {
+        display: inline-block;
         background: #ff0;
         color: #000;
-      }
-      #joinSection {
-        display: none;
-        gap: 10px;
-        flex-direction: column;
-        align-items: center;
-      }
-      #codeInput {
-        padding: 15px;
-        font-size: 1.5rem;
-        width: 200px;
-        text-align: center;
-        border: 3px solid #0f0;
-        border-radius: 15px;
-        background: #111;
-        color: #0f0;
-      }
-      #roomCode {
-        font-size: 3rem;
-        font-family: "Bangers";
-        letter-spacing: 5px;
-      }
-      #game {
-        display: none;
-      }
-      #info {
-        position: absolute;
-        top: 15px;
-        left: 15px;
-        z-index: 100;
-        background: rgba(0, 0, 0, 0.85);
-        padding: 10px 18px;
-        border-radius: 15px;
-        border: 3px solid #0f0;
-        box-shadow: 0 0 25px rgba(0, 255, 0, 0.6);
-        font-family: "Bangers";
-        font-size: 1.6rem;
-      }
-      #cardsInfo {
-        position: absolute;
-        bottom: 15px;
-        left: 15px;
-        z-index: 100;
-        background: rgba(0, 0, 0, 0.75);
-        padding: 8px 15px;
-        border-radius: 12px;
-        border: 2px solid #0ff;
-        font-size: 0.9rem;
-        color: #0ff;
-      }
-      #message {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        z-index: 150;
-        background: rgba(0, 0, 0, 0.95);
-        padding: 12px 30px;
-        border-radius: 20px;
-        border: 4px solid #ff0;
-        font-family: "Bangers";
-        font-size: 1.8rem;
-        text-align: center;
-        animation: pop 0.4s;
-        pointer-events: none;
-        box-shadow: 0 0 40px rgba(255, 255, 0, 0.8);
-        max-width: 300px;
-      }
-      #hint {
-        position: absolute;
-        bottom: 15px;
-        left: 15px;
-        z-index: 100;
-        background: rgba(0, 0, 0, 0.9);
-        padding: 8px 16px;
-        border-radius: 12px;
-        border: 2px solid #0ff;
-        font-size: 0.85rem;
-        color: #0ff;
-        opacity: 0;
-        transition: opacity 0.3s;
-        max-width: 250px;
-      }
-      #hint.show {
-        opacity: 1;
-      }
-      #winScreen {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.98);
-        display: none;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-      }
-      #winScreen.show {
-        display: flex;
-      }
-      #winText {
-        font-family: "Bangers";
-        font-size: 6rem;
-        text-shadow: 0 0 40px #0f0;
-        margin-bottom: 40px;
-      }
-      .playAgain {
-        padding: 25px 90px;
-        font-size: 2.3rem;
-        background: #0f0;
-        color: #000;
-        border: none;
-        border-radius: 60px;
-        cursor: pointer;
-        font-weight: 900;
-        transition: all 0.3s;
-      }
-      .playAgain:hover {
-        transform: scale(1.05);
-        box-shadow: 0 0 40px #0f0;
-      }
-      .backHome {
-        margin-top: 20px;
-        padding: 15px 50px;
-        font-size: 1.5rem;
-        background: transparent;
-        color: #fff;
-        border: 3px solid #fff;
-        border-radius: 40px;
-        cursor: pointer;
+        padding: 2px 8px;
+        border-radius: 5px;
+        font-size: 0.7rem;
         font-weight: 700;
-        transition: all 0.3s;
+        margin-left: 10px;
+        vertical-align: middle;
       }
-      .backHome:hover {
-        background: #fff;
-        color: #000;
+
+      .footer {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #666;
+        font-size: 0.9rem;
+        z-index: 10;
       }
-      @keyframes pop {
-        0% {
-          opacity: 0;
-          transform: scale(0.8);
-        }
-        100% {
-          opacity: 1;
-          transform: scale(1);
-        }
-      }
+
       @media (max-width: 768px) {
-        #lobby h1 {
-          font-size: 3rem;
+        .container {
+          padding: 20px 15px;
         }
-        #info {
-          font-size: 1.3rem;
-          padding: 8px 15px;
+
+        .buttons {
+          gap: 20px;
         }
-        #message {
-          top: 80px;
-          right: 10px;
-          left: 10px;
-          font-size: 1.4rem;
-          padding: 10px 20px;
-          max-width: none;
-        }
-        #winText {
-          font-size: 3.5rem;
-        }
-        .playAgain {
-          padding: 20px 60px;
-          font-size: 1.8rem;
+
+        .game-btn {
+          padding: 20px 40px;
         }
       }
     </style>
   </head>
   <body>
-    <!-- LOBBY -->
-    <div id="lobby">
-      <h1>KADI 254</h1>
-      <button class="btn" id="createBtn">CREATE ROOM</button>
-      <div id="joinSection">
-        <input id="codeInput" placeholder="Enter Code" />
-        <button class="btn" id="joinBtn">JOIN</button>
+    <div class="bg-cards">
+      <div
+        class="floating-card"
+        style="left: 10%; top: 20%; animation-delay: 0s"
+      >
+        ♠️
       </div>
-      <div id="roomCode"></div>
-      <button class="btn" id="showJoin">Join Existing Room</button>
+      <div
+        class="floating-card"
+        style="left: 80%; top: 30%; animation-delay: 2s"
+      >
+        ♥️
+      </div>
+      <div
+        class="floating-card"
+        style="left: 20%; top: 70%; animation-delay: 4s"
+      >
+        ♣️
+      </div>
+      <div
+        class="floating-card"
+        style="left: 70%; top: 60%; animation-delay: 6s"
+      >
+        ♦️
+      </div>
+      <div
+        class="floating-card"
+        style="left: 50%; top: 10%; animation-delay: 3s"
+      >
+        🃏
+      </div>
     </div>
 
-    <!-- GAME -->
-    <div id="game">
-      <canvas id="canvas"></canvas>
+    <div class="container">
+      <h1 class="logo">KADI 254</h1>
+      <p class="subtitle">STREET KING</p>
 
-      <div id="info"><div id="score">Mpinzani: 0 | Wewe: 0</div></div>
-      <div id="cardsInfo"><div id="cardsCount">K: 0 | M: 0</div></div>
+      <div class="buttons">
+        <button class="game-btn btn-ai" onclick="startAIGame()">
+          <span>🤖 VS COMPUTER</span>
+        </button>
 
-      <div id="message"></div>
-      <div id="hint">Tap kadi nyingi! Bonyeza top card kutupa!</div>
+        <button
+          class="game-btn btn-bluetooth"
+          onclick="startBluetoothGame()"
+          disabled
+        >
+          <span>📱 BLUETOOTH <span class="badge">SOON</span></span>
+        </button>
 
-      <div id="winScreen">
-        <div id="winText">UMESHINDA!</div>
-        <button class="playAgain" id="playAgainBtn">CHEZA TENA</button>
-        <button class="backHome" onclick="goHome()">RUDI HOME</button>
+        <button class="game-btn btn-online" onclick="startOnlineGame()">
+          <span>🌐 ONLINE PLAYER </span>
+        </button>
       </div>
-
-      <audio id="shuffle" src="sounds/shuffle.ogg" preload="auto"></audio>
-      <audio id="pick" src="sounds/pick.ogg" preload="auto"></audio>
-      <audio id="throw" src="sounds/throw.ogg" preload="auto"></audio>
-      <audio id="badmove" src="sounds/badmove.ogg" preload="auto"></audio>
-      <audio
-        id="win"
-        src="https://assets.mixkit.co/sfx/preview/mixkit-triumphant-game-winning-575.mp3"
-        preload="auto"
-      ></audio>
     </div>
 
-    <!-- ==================== SOCKET + GAME LOGIC ==================== -->
-    <script>
-      /* ==================== SOCKET.IO LOBBY ==================== */
-      const socket = io();
-      let roomId = null;
-      let isMyTurn = false;
-
-      document.getElementById("createBtn").onclick = () =>
-        socket.emit("createRoom");
-      document.getElementById("showJoin").onclick = () => {
-        document.getElementById("joinSection").style.display = "flex";
-        document.getElementById("createBtn").style.display = "none";
-        document.getElementById("showJoin").style.display = "none";
-      };
-      document.getElementById("joinBtn").onclick = () => {
-        const code = document
-          .getElementById("codeInput")
-          .value.trim()
-          .toUpperCase();
-        if (code) socket.emit("joinRoom", code);
-      };
-
-      socket.on("roomCreated", (id) => {
-        roomId = id;
-        document.getElementById(
-          "roomCode"
-        ).innerHTML = `Code: <b>${id}</b><br>Share with friend!`;
-      });
-      socket.on("roomJoined", (id) => {
-        roomId = id;
-      });
-      socket.on("error", (msg) => alert(msg));
-      socket.on("opponentLeft", () => {
-        alert("Opponent left!");
-        location.reload();
-      });
-
-      socket.on("gameStart", ({ youAreFirst }) => {
-        isMyTurn = youAreFirst;
-        myTurn = youAreFirst;
-        document.getElementById("lobby").style.display = "none";
-        document.getElementById("game").style.display = "block";
-
-        const tryStart = () => {
-          if (typeof window.startOnlineGame === "function")
-            window.startOnlineGame();
-          else setTimeout(tryStart, 50);
-        };
-        tryStart();
-
-        window.showMessage(
-          youAreFirst ? "ZAMUU YAKO!" : "Subiri mpinzani...",
-          youAreFirst ? "#0f0" : "#ff0"
-        );
-      });
-
-      function sendMove(move) {
-        if (!roomId || !isMyTurn) return;
-        socket.emit("move", { roomId, move });
-      }
-
-      function handleOpponentMove(move) {
-        if (move.type === "drop") {
-          const cards = move.cards.map((c) => ({
-            suit: c.suit,
-            num: c.num,
-            float: false,
-            ready: false,
-          }));
-          window.originalDropCards(cards, false);
-        } else if (move.type === "pick") {
-          window.originalPickCards(move.num, false);
-        }
-      }
-      socket.on("opponentMove", handleOpponentMove);
-    </script>
+    <div class="footer">© 2024 KADI 254 - Nairobi Streets Edition</div>
 
     <script>
-      /* ==================== FULL KADI 254 GAME LOGIC ==================== */
-      (() => {
-        const canvas = document.getElementById("canvas");
-        const ctx = canvas.getContext("2d");
-        const scoreEl = document.getElementById("score");
-        const cardsCountEl = document.getElementById("cardsCount");
-        const messageEl = document.getElementById("message");
-        const hintEl = document.getElementById("hint");
-        const winScreen = document.getElementById("winScreen");
-        const winText = document.getElementById("winText");
-
-        let CARD_W = 120,
-          CARD_H = 174;
-        let DECK_X, DECK_Y, TOPCARD_X, TOPCARD_Y, USER_Y, OPP_Y;
-        let BUTTON_X,
-          BUTTON_Y,
-          BUTTON_W = 100,
-          BUTTON_H = 40;
-
-        let playerScore = 0,
-          computerScore = 0;
-
-        const deckScatterOffsets = [
-          { x: 0, y: 0, rot: 0 },
-          { x: 12, y: 8, rot: -0.15 },
-          { x: -8, y: 15, rot: 0.12 },
-          { x: 18, y: -5, rot: -0.08 },
-          { x: -15, y: 22, rot: 0.2 },
-        ];
-        const playedPileOffsets = [
-          { x: 0, y: 0, rot: 0.05 },
-          { x: -18, y: 12, rot: -0.22 },
-          { x: 25, y: -8, rot: 0.18 },
-          { x: -12, y: 25, rot: -0.15 },
-          { x: 20, y: 15, rot: 0.25 },
-        ];
-
-        function resize() {
-          canvas.width = innerWidth;
-          canvas.height = innerHeight;
-          CARD_W = Math.min(innerWidth * 0.09, 65);
-          CARD_H = CARD_W * 1.45;
-          DECK_X = canvas.width * 0.2 - CARD_W * 1.2;
-          DECK_Y = canvas.height * 0.5 - CARD_H * 0.5;
-          TOPCARD_X = canvas.width * 0.5 - CARD_W * 0.5;
-          TOPCARD_Y = canvas.height * 0.5 - CARD_H * 0.5;
-          USER_Y = canvas.height - CARD_H - 20;
-          OPP_Y = 20;
-          BUTTON_X = canvas.width - 130;
-          BUTTON_Y = 20;
-        }
-        window.addEventListener("resize", resize);
-        resize();
-
-        const deckBack = new Image();
-        deckBack.src = "images/back_side.png";
-        const oppBack = new Image();
-        oppBack.src = "images/back_side.png";
-        const suits = ["clubs", "diamonds", "hearts", "spades"];
-        const cardImages = {};
-        for (let s = 0; s < 4; s++)
-          for (let n = 0; n < 13; n++) {
-            const imgNum =
-              n === 0
-                ? "1"
-                : n === 9
-                ? "10"
-                : n === 10
-                ? "11"
-                : n === 11
-                ? "12"
-                : n === 12
-                ? "13"
-                : `${n + 1}`;
-            const img = new Image();
-            img.src = `images/${imgNum}_of_${suits[s]}.png`;
-            cardImages[`${n}_${s}`] = img;
-          }
-
-        let gameState = "loading",
-          animationCards = [],
-          animationProgress = 0,
-          animationTimer = 0,
-          dealCounter = 0;
-        let allCards = [],
-          userCards = [],
-          opponentCards = [],
-          staleCards = [],
-          topCard = null,
-          recentPlayedCards = [];
-        let myTurn = false,
-          shouldEat = false,
-          gameDone = false,
-          isAnimating = false,
-          gameReady = false,
-          dragCard = null;
-
-        function shuffle(a) {
-          for (let i = a.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [a[i], a[j]] = [a[j], a[i]];
-          }
-          return a;
-        }
-        function playSound(id) {
-          try {
-            document.getElementById(id).currentTime = 0;
-            document.getElementById(id).play();
-          } catch (e) {}
-        }
-        function vibrate() {
-          navigator.vibrate?.([150, 80, 150]);
-        }
-
-        window.showMessage = function (txt, color = "#0f0", time = 0) {
-          messageEl.textContent = txt;
-          messageEl.style.borderColor = color;
-          if (time > 0) {
-            clearTimeout(window.msgTimeout);
-            window.msgTimeout = setTimeout(() => {
-              messageEl.textContent = "";
-            }, time);
-          }
-        };
-        function updateScore() {
-          scoreEl.innerHTML = `<span style="color:#ff0">Mpinzani: ${computerScore}</span> | <span style="color:#0f0">Wewe: ${playerScore}</span>`;
-          cardsCountEl.innerHTML = `K: ${opponentCards.length} | M: ${userCards.length}`;
-        }
-        function showHint(show = true) {
-          if (show && myTurn && !gameDone && gameState === "ready")
-            hintEl.classList.add("show");
-          else hintEl.classList.remove("show");
-        }
-
-        function drawCard(
-          card,
-          x,
-          y,
-          scale = 1,
-          glow = false,
-          angle = 0,
-          isBack = false
-        ) {
-          ctx.save();
-          ctx.translate(x + (CARD_W * scale) / 2, y + (CARD_H * scale) / 2);
-          ctx.rotate(angle);
-          if (glow) {
-            ctx.shadowColor = "#00ffff";
-            ctx.shadowBlur = 80;
-          }
-          const img = isBack
-            ? oppBack
-            : cardImages[`${card.num}_${card.suit}`] || oppBack;
-          try {
-            ctx.drawImage(
-              img,
-              (-CARD_W * scale) / 2,
-              (-CARD_H * scale) / 2,
-              CARD_W * scale,
-              CARD_H * scale
-            );
-          } catch (e) {
-            ctx.fillStyle = "#333";
-            ctx.fillRect(
-              (-CARD_W * scale) / 2,
-              (-CARD_H * scale) / 2,
-              CARD_W * scale,
-              CARD_H * scale
-            );
-          }
-          ctx.restore();
-        }
-        function drawScatteredDeck(x, y) {
-          ctx.shadowColor = "#00ff00";
-          ctx.shadowBlur = 25;
-          ctx.shadowOffsetY = 10;
-          deckScatterOffsets.forEach((o, i) => {
-            const drawX = x + o.x,
-              drawY = y + o.y,
-              scale = 0.95 - i * 0.03;
-            ctx.save();
-            ctx.translate(
-              drawX + (CARD_W * scale) / 2,
-              drawY + (CARD_H * scale) / 2
-            );
-            ctx.rotate(o.rot);
-            ctx.drawImage(
-              deckBack,
-              -(CARD_W * scale) / 2,
-              -(CARD_W * scale) / 2,
-              CARD_W * scale,
-              CARD_H * scale
-            );
-            ctx.restore();
-          });
-        }
-        function drawRecentPlayed() {
-          if (!recentPlayedCards.length) return;
-          const num = Math.min(recentPlayedCards.length, 5);
-          const recent = recentPlayedCards.slice(-num);
-          recent.forEach((c, i) => {
-            const o = playedPileOffsets[i];
-            const drawX = TOPCARD_X + o.x,
-              drawY = TOPCARD_Y + o.y,
-              scale = 1.0 - i * 0.04;
-            ctx.save();
-            ctx.translate(
-              drawX + (CARD_W * scale) / 2,
-              drawY + (CARD_H * scale) / 2
-            );
-            ctx.rotate(o.rot);
-            ctx.shadowColor = "rgba(0,0,0,0.6)";
-            ctx.shadowBlur = 15;
-            ctx.shadowOffsetX = 5;
-            ctx.shadowOffsetY = 8;
-            ctx.drawImage(
-              cardImages[`${c.num}_${c.suit}`] || oppBack,
-              -(CARD_W * scale) / 2,
-              -(CARD_W * scale) / 2,
-              CARD_W * scale,
-              CARD_H * scale
-            );
-            ctx.restore();
-          });
-        }
-        function drawFan(cards, baseY, isUser = true) {
-          if (!cards.length) return;
-          const spacing = CARD_W * 0.7;
-          const totalW = (cards.length - 1) * spacing + CARD_W;
-          const startX = (canvas.width - totalW) / 2;
-          const inKadi = isUser && cards.length === 1 && canFinish(cards[0]);
-          for (let i = 0; i < cards.length; i++) {
-            const c = cards[i];
-            const x = startX + i * spacing;
-            const dy = isUser ? (c.float ? -35 : 0) + (c.ready ? -50 : 0) : 0;
-            const angle = (i - (cards.length - 1) / 2) * (isUser ? 0.1 : -0.08);
-            const scale = isUser ? 1.0 : 0.85;
-            if (inKadi) {
-              const pulse = Math.sin(Date.now() / 300) * 0.5 + 0.5;
-              ctx.shadowColor = `rgba(255,${Math.floor(pulse * 100)},0,${
-                0.8 + pulse * 0.2
-              })`;
-              ctx.shadowBlur = 50 + pulse * 30;
-            } else {
-              ctx.shadowColor = c.ready ? "#00ffff" : "rgba(0,255,255,0.5)";
-              ctx.shadowBlur = c.ready ? 70 : 30;
-            }
-            ctx.shadowOffsetY = 15;
-            drawCard(
-              c,
-              x,
-              baseY + dy,
-              scale,
-              c.ready || inKadi,
-              angle,
-              !isUser
-            );
-          }
-        }
-
-        function updateAnimation() {
-          animationTimer++;
-          animationProgress += 0.05;
-          if (gameState === "reshuffling") {
-            animationCards.forEach((c) => {
-              c.x += c.dx;
-              c.y += c.dy;
-              c.rot += c.drot;
-              c.dx *= 0.97;
-              c.dy *= 0.97;
-              c.drot *= 0.97;
-            });
-          } else if (gameState === "dealing") {
-            if (dealCounter < 8) {
-              const isUser = dealCounter % 2 === 0;
-              const card = allCards.pop();
-              if (card) {
-                card.x = DECK_X + CARD_W / 2;
-                card.y = DECK_Y + CARD_H / 2;
-                card.targetX =
-                  (isUser ? userCards.length : opponentCards.length) *
-                    CARD_W *
-                    0.55 +
-                  (canvas.width - 8 * CARD_W * 0.55) / 2;
-                card.targetY = isUser ? USER_Y : OPP_Y;
-                card.progress = 0;
-                animationCards.push(card);
-                (isUser ? userCards : opponentCards).push(card);
-              }
-              dealCounter++;
-            } else if (
-              animationCards.length > 0 &&
-              animationCards.every((c) => c.progress >= 1)
-            ) {
-              animationCards = [];
-              topCard = allCards.pop();
-              if (topCard) {
-                topCard.x = TOPCARD_X;
-                topCard.y = TOPCARD_Y;
-              }
-              gameState = "ready";
-              gameReady = true;
-              myTurn = isMyTurn;
-              window.showMessage(
-                myTurn ? "ZAMUU YAKO!" : "Subiri mpinzani...",
-                myTurn ? "#0f0" : "#ff0"
-              );
-            } else {
-              animationCards.forEach((c) => {
-                c.progress = Math.min(c.progress + 0.08, 1);
-                const ease = 1 - Math.pow(1 - c.progress, 3);
-                c.x = c.x + (c.targetX - c.x) * ease;
-                c.y = c.y + (c.targetY - c.y) * ease;
-              });
-            }
-          }
-        }
-
-        function draw() {
-          updateAnimation();
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.fillStyle = "#001a00";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-          if (
-            allCards.length > 0 &&
-            (gameState === "ready" || gameState === "dealing")
-          )
-            drawScatteredDeck(DECK_X, DECK_Y);
-
-          if (gameState === "reshuffling" || gameState === "dealing") {
-            animationCards.forEach((c) =>
-              drawCard(
-                c,
-                c.x - CARD_W / 2,
-                c.y - CARD_H / 2,
-                1,
-                false,
-                Math.sin(animationTimer * 0.1) * 0.1
-              )
-            );
-          }
-
-          if (gameState === "ready" || gameState === "dealing") {
-            drawFan(opponentCards, OPP_Y, false);
-            drawFan(userCards, USER_Y, true);
-          }
-
-          if (gameState === "ready") {
-            drawRecentPlayed();
-            if (topCard) {
-              ctx.shadowColor = "#ffff00";
-              ctx.shadowBlur = 80;
-              ctx.shadowOffsetY = 15;
-              drawCard(topCard, TOPCARD_X, TOPCARD_Y, 1.15, true);
-            }
-          }
-
-          if (isAnimating && window.animCards) {
-            const progress = Math.min(window.animStep / 30, 1);
-            const ease = 1 - Math.pow(1 - progress, 3);
-            const dx = window.animToX - window.animFromX;
-            const dy = window.animToY - window.animFromY;
-            window.animCards.forEach((c, i) => {
-              const offsetX = i * 10 * (window.animIsUser ? 1 : -1);
-              const offsetY = i * -5;
-              const x = window.animFromX + dx * ease + offsetX * (1 - ease);
-              const y = window.animFromY + dy * ease + offsetY * (1 - ease);
-              drawCard(c, x, y, 1, true, ease * 0.3);
-            });
-            window.animStep++;
-            if (progress >= 1) isAnimating = false;
-          }
-
-          ctx.fillStyle = gameState === "ready" ? "#0f0" : "#888";
-          ctx.fillRect(BUTTON_X, BUTTON_Y, BUTTON_W, BUTTON_H);
-          ctx.fillStyle = "#000";
-          ctx.font = "bold 20px Poppins";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText(
-            "Restart",
-            BUTTON_X + BUTTON_W / 2,
-            BUTTON_Y + BUTTON_H / 2
-          );
-          ctx.textAlign = "left";
-          ctx.textBaseline = "alphabetic";
-
-          updateScore();
-          showHint();
-          requestAnimationFrame(draw);
-        }
-
-        function startGame() {
-          playSound("shuffle");
-          allCards = [];
-          userCards = [];
-          opponentCards = [];
-          staleCards = [];
-          topCard = null;
-          recentPlayedCards = [];
-          gameState = "reshuffling";
-          animationProgress = 0;
-          animationTimer = 0;
-          dealCounter = 0;
-          isAnimating = true;
-          gameDone = false;
-          gameReady = false;
-          myTurn = isMyTurn;
-          shouldEat = false;
-          winScreen.classList.remove("show");
-
-          for (let s = 0; s < 4; s++)
-            for (let n = 0; n < 13; n++) allCards.push({ suit: s, num: n });
-          shuffle(allCards);
-
-          animationCards = [];
-          for (let i = 0; i < 10; i++) {
-            animationCards.push({
-              x: DECK_X + CARD_W / 2,
-              y: DECK_Y + CARD_H / 2,
-              dx: (Math.random() - 0.5) * 8,
-              dy: (Math.random() - 0.5) * 8,
-              rot: (Math.random() - 0.5) * Math.PI,
-              drot: (Math.random() - 0.5) * 0.08,
-            });
-          }
-
-          setTimeout(() => {
-            gameState = "dealing";
-            animationCards = [];
-            dealCounter = 0;
-            animationProgress = 0;
-          }, 1000);
-        }
-
-        function dropCards(cards, isUser) {
-          if (!isValid(topCard, cards, shouldEat)) {
-            playSound("badmove");
-            vibrate();
-            window.showMessage("HAPANA! Si halali!", "#f00", 3000);
-            userCards.forEach((c) => (c.ready = false));
-            return;
-          }
-          isAnimating = true;
-          window.animCards = cards.map((c) => ({ ...c }));
-          window.animIsUser = isUser;
-          const arr = isUser ? userCards : opponentCards;
-          const firstIdx = arr.findIndex(
-            (c) => c.suit === cards[0].suit && c.num === cards[0].num
-          );
-          const spacing = CARD_W * 0.55;
-          const totalW = (arr.length - 1) * spacing + CARD_W;
-          const startX = (canvas.width - totalW) / 2;
-          window.animFromX = startX + firstIdx * spacing;
-          window.animFromY = isUser ? USER_Y : OPP_Y;
-          window.animToX = TOPCARD_X;
-          window.animToY = TOPCARD_Y;
-          window.animStep = 0;
-          playSound("throw");
-          window.showMessage(
-            isUser ? "Poa sana!" : "Mpinzani ametupa!",
-            "#0f0"
-          );
-          setTimeout(() => {
-            if (topCard) recentPlayedCards.push(topCard);
-            cards.forEach((c) => recentPlayedCards.push(c));
-            recentPlayedCards = recentPlayedCards.slice(-5);
-            staleCards.push(topCard, ...cards.slice(0, -1));
-            topCard = cards[cards.length - 1];
-            if (isUser) {
-              userCards = userCards.filter(
-                (c) =>
-                  !cards.some((dc) => dc.suit === c.suit && dc.num === c.num)
-              );
-              userCards.forEach((c) => {
-                c.ready = false;
-                c.float = false;
-              });
-            } else
-              opponentCards = opponentCards.filter(
-                (c) =>
-                  !cards.some((dc) => dc.suit === c.suit && dc.num === c.num)
-              );
-            const feeder = [1, 2].includes(topCard.num);
-            if (isQuestion(topCard))
-              window.showMessage("FUNIKA HII KADI!", "#ff0");
-            else if (feeder) {
-              window.showMessage(
-                topCard.num === 1 ? "KULA 2!" : "KULA 3!",
-                "#f00"
-              );
-              shouldEat = true;
-              myTurn = !isUser;
-            } else {
-              shouldEat = false;
-              myTurn = !isUser;
-              window.showMessage(
-                myTurn ? "Zamuu yako!" : "Mpinzani anacheza...",
-                myTurn ? "#0f0" : "#ff0",
-                2000
-              );
-            }
-            checkGameOver();
-            isAnimating = false;
-          }, 900);
-        }
-
-        function pickCards(num, isUser) {
-          if (isAnimating || gameState !== "ready") return;
-          isAnimating = true;
-          window.animCards = [];
-          for (let i = 0; i < num && allCards.length > 0; i++)
-            window.animCards.push(allCards.pop());
-          const spacing = CARD_W * 0.55;
-          const totalW =
-            ((isUser ? userCards.length : opponentCards.length) + num - 1) *
-              spacing +
-            CARD_W;
-          const startX = (canvas.width - totalW) / 2;
-          const base = isUser ? userCards.length : opponentCards.length;
-          window.animFromX = DECK_X;
-          window.animFromY = DECK_Y;
-          window.animToX = startX + base * spacing;
-          window.animToY = isUser ? USER_Y : OPP_Y;
-          window.animStep = 0;
-          playSound("pick");
-          window.showMessage(
-            isUser ? "Umechukua!" : "Mpinzani anachukua",
-            "#fff"
-          );
-          setTimeout(() => {
-            if (isUser)
-              userCards.push(
-                ...window.animCards.map((c) => ({
-                  ...c,
-                  float: false,
-                  ready: false,
-                }))
-              );
-            else opponentCards.push(...window.animCards.map((c) => ({ ...c })));
-            isAnimating = false;
-            shouldEat = false;
-            myTurn = !isUser;
-            messageEl.textContent = "";
-            window.showMessage(
-              myTurn ? "Zamuu yako!" : "Subiri kidogo...",
-              myTurn ? "#0f0" : "#ff0",
-              2000
-            );
-            checkGameOver();
-          }, 900);
-        }
-
-        function isQuestion(c) {
-          return [7, 10, 11, 12].includes(c.num);
-        }
-        function canFinish(c) {
-          return ![0, 1, 2, 7, 10, 11, 12].includes(c.num);
-        }
-
-        function isValid(top, cards, eat) {
-          if (!cards.length) return false;
-          let prev = top;
-          for (let i = 0; i < cards.length; i++) {
-            const c = cards[i],
-              first = i === 0;
-            if (eat) {
-              if (first) {
-                if (c.num !== prev.num && c.num !== 0) return false;
-              } else if (c.num !== prev.num) return false;
-            } else if (!first) {
-              if (isQuestion(prev)) {
-                if (
-                  !(c.suit === prev.suit || c.num === prev.num || c.num === 0)
-                )
-                  return false;
-              } else if (c.num !== prev.num) return false;
-            } else if (
-              !(c.suit === prev.suit || c.num === prev.num || c.num === 0)
-            )
-              return false;
-            prev = c;
-          }
-          return true;
-        }
-
-        window.startOnlineGame = startGame;
-        window.originalDropCards = dropCards;
-        window.originalPickCards = pickCards;
-
-        function checkGameOver() {
-          if (
-            userCards.length === 0 &&
-            canFinish(topCard) &&
-            opponentCards.length > 0
-          ) {
-            playerScore++;
-            winText.textContent = "UMESHINDA!!!";
-            winText.style.color = "#0f0";
-            winScreen.classList.add("show");
-            if (typeof confetti === "function")
-              confetti({
-                particleCount: 600,
-                spread: 140,
-                origin: { y: 0.55 },
-              });
-            playSound("win");
-            gameDone = true;
-            updateScore();
-          }
-          if (
-            opponentCards.length === 0 &&
-            canFinish(topCard) &&
-            userCards.length > 0
-          ) {
-            computerScore++;
-            winText.textContent = "MPINZANI AMESHINDA!";
-            winText.style.color = "#f00";
-            winScreen.classList.add("show");
-            gameDone = true;
-            updateScore();
-          }
-        }
-
-        /* ------------------- INPUT (EXACTLY THE SAME AS AI VERSION) ------------------- */
-        function getHit(x, y) {
-          // USER CARDS
-          const spacing = CARD_W * 0.7;
-          const totalW = (userCards.length - 1) * spacing + CARD_W;
-          const startX = (canvas.width - totalW) / 2;
-
-          for (let i = userCards.length - 1; i >= 0; i--) {
-            const c = userCards[i];
-            const cx = startX + i * spacing;
-            const dy = (c.float ? -35 : 0) + (c.ready ? -50 : 0);
-            const left = cx + CARD_W * 0.05; // 5% inset
-            const right = cx + CARD_W * 0.95; // 95% inset
-            const top = USER_Y + dy; // exact top
-            const bottom = USER_Y + dy + CARD_H; // exact bottom
-
-            if (x >= left && x <= right && y >= top && y <= bottom) {
-              return { type: "user", idx: i };
-            }
-          }
-
-          // DECK
-          if (
-            x > DECK_X - 30 &&
-            x < DECK_X + CARD_W + 30 &&
-            y > DECK_Y - 30 &&
-            y < DECK_Y + CARD_H + 30
-          ) {
-            return { type: "deck" };
-          }
-
-          // TOP PILE
-          if (
-            x > canvas.width * 0.3 &&
-            x < canvas.width * 0.7 &&
-            y > canvas.height * 0.3 &&
-            y < canvas.height * 0.7
-          ) {
-            return { type: "top" };
-          }
-
-          // RESTART BUTTON
-          if (
-            x > BUTTON_X &&
-            x < BUTTON_X + BUTTON_W &&
-            y > BUTTON_Y &&
-            y < BUTTON_Y + BUTTON_H
-          ) {
-            return { type: "restart" };
-          }
-
-          return null;
-        }
-
-        function getInputXY(e) {
-          const rect = canvas.getBoundingClientRect();
-          const ev = e.touches ? e.touches[0] : e;
-          if (!ev) return { x: 0, y: 0 };
-          return {
-            x: (ev.clientX - rect.left) * (canvas.width / rect.width),
-            y: (ev.clientY - rect.top) * (canvas.height / rect.height),
-          };
-        }
-
-        function handleStart(x, y) {
-          if (!myTurn || isAnimating || gameDone || gameState !== "ready")
-            return;
-          const hit = getHit(x, y);
-          if (hit?.type === "user") {
-            dragCard = {
-              card: userCards[hit.idx],
-              idx: hit.idx,
-              x: x - CARD_W / 2,
-              y: y - CARD_H / 2,
-            };
-            userCards[hit.idx].float = true;
-          }
-        }
-        function handleMove(x, y) {
-          if (!dragCard) return;
-          dragCard.x = x - CARD_W / 2;
-          dragCard.y = y - CARD_H / 2;
-        }
-        function handleEnd(x, y) {
-          const hit = getHit(x, y);
-          if (hit?.type === "restart") {
-            startGame();
-            return;
-          }
-          if (!myTurn || isAnimating || gameDone || gameState !== "ready")
-            return;
-
-          if (hit?.type === "deck") {
-            const num = shouldEat ? (topCard.num === 1 ? 2 : 3) : 1;
-            pickCards(num, true);
-            userCards.forEach((c) => (c.float = false));
-            dragCard = null;
-            return;
-          }
-          if (hit?.type === "top") {
-            const ready = userCards.filter((c) => c.ready);
-            if (ready.length > 0)
-              dropCards(
-                ready.map((c) => ({ suit: c.suit, num: c.num })),
-                true
-              );
-            else window.showMessage("Chagua kadi ya kutupa!", "#ff0");
-            userCards.forEach((c) => (c.float = false));
-            dragCard = null;
-            return;
-          }
-
-          if (dragCard) {
-            const dx = x - (dragCard.x + CARD_W / 2);
-            if (Math.abs(dx) > 70) {
-              const dir = dx > 0 ? 1 : -1;
-              const newIdx = dragCard.idx + dir;
-              if (newIdx >= 0 && newIdx < userCards.length) {
-                [userCards[dragCard.idx], userCards[newIdx]] = [
-                  userCards[newIdx],
-                  userCards[dragCard.idx],
-                ];
-              }
-            } else {
-              userCards[dragCard.idx].ready = !userCards[dragCard.idx].ready;
-            }
-          }
-          userCards.forEach((c) => (c.float = false));
-          dragCard = null;
-        }
-
-        canvas.addEventListener(
-          "touchstart",
-          (e) => {
-            e.preventDefault();
-            const p = getInputXY(e);
-            handleStart(p.x, p.y);
-          },
-          { passive: false }
-        );
-        canvas.addEventListener(
-          "touchmove",
-          (e) => {
-            e.preventDefault();
-            const p = getInputXY(e);
-            handleMove(p.x, p.y);
-          },
-          { passive: false }
-        );
-        canvas.addEventListener(
-          "touchend",
-          (e) => {
-            e.preventDefault();
-            const p = getInputXY(e);
-            handleEnd(p.x, p.y);
-          },
-          { passive: false }
-        );
-        canvas.addEventListener("mousedown", (e) => {
-          e.preventDefault();
-          const p = getInputXY(e);
-          handleStart(p.x, p.y);
-        });
-        canvas.addEventListener("mousemove", (e) => {
-          const p = getInputXY(e);
-          handleMove(p.x, p.y);
-        });
-        canvas.addEventListener("mouseup", (e) => {
-          const p = getInputXY(e);
-          handleEnd(p.x, p.y);
-        });
-
-        /* ----- ONLINE WRAPPERS ----- */
-        window.dropCards = function (cards, isUser) {
-          if (!isUser) return window.originalDropCards.apply(this, arguments);
-          sendMove({
-            type: "drop",
-            cards: cards.map((c) => ({ suit: c.suit, num: c.num })),
-          });
-          window.originalDropCards.call(this, cards, true);
-        };
-        window.pickCards = function (num, isUser) {
-          if (!isUser) return window.originalPickCards.apply(this, arguments);
-          sendMove({ type: "pick", num });
-          window.originalPickCards.call(this, num, true);
-        };
-
-        /* ----- IMAGE PRELOAD ----- */
-        let loaded = 0;
-        const expected = Object.keys(cardImages).length + 2;
-        function imgLoaded() {
-          loaded++;
-          if (loaded >= expected) {
-            resize();
-            requestAnimationFrame(draw);
-          }
-        }
-        deckBack.onload = imgLoaded;
-        oppBack.onload = imgLoaded;
-        Object.values(cardImages).forEach((i) => (i.onload = imgLoaded));
-        setTimeout(() => {
-          if (gameState === "loading") {
-            resize();
-            requestAnimationFrame(draw);
-          }
-        }, 1500);
-      })();
-
-      function goHome() {
-        window.location.href = "index.html";
+      function startAIGame() {
+        // Navigate to AI game page
+        window.location.href = "game-ai.html";
       }
-      document.getElementById("playAgainBtn").addEventListener("click", () => {
-        if (typeof window.startOnlineGame === "function")
-          window.startOnlineGame();
-      });
+
+      function startBluetoothGame() {
+        // TODO: Implement Bluetooth game
+        alert("Bluetooth mode coming soon! 📱");
+      }
+
+      function startOnlineGame() {
+        window.location.href = "game-online.html";
+      }
     </script>
   </body>
 </html>
