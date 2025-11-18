@@ -6,10 +6,12 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: { origin: "*" }
+});
 
 app.use(express.static(__dirname));
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'welcome.html')));
 
 const rooms = new Map();
 
@@ -34,12 +36,15 @@ function shuffle(array) {
 io.on('connection', (socket) => {
   console.log('Player connected:', socket.id);
 
-  socket.on('createRoom', () => {
+  // CREATE ROOM
+  socket.on('createRoom', ({ playerName }) => {
     const roomId = uuidv4().slice(0, 6).toUpperCase();
     rooms.set(roomId, {
       players: [socket.id],
       player1: socket.id,
+      player1Name: (playerName || "Player 1").trim(),
       player2: null,
+      player2Name: null,
       deck: null,
       topCard: null,
       player1Hand: null,
@@ -47,79 +52,154 @@ io.on('connection', (socket) => {
     });
     socket.join(roomId);
     socket.emit('roomCreated', roomId);
-    console.log(`Room created: ${roomId}`);
+    console.log(`Room created: ${roomId} by ${playerName}`);
   });
 
-  socket.on('joinRoom', (code) => {
-    const roomId = code.toUpperCase();
+  // JOIN ROOM – FIXED & SAFE
+  socket.on('joinRoom', (data) => {
+    // Accept both { code, playerName } and old format
+    const code = typeof data === 'string' ? data : data?.code;
+    const playerName = typeof data === 'string' ? "Player 2" : data?.playerName;
+
+    if (!code || typeof code !== 'string') {
+      return socket.emit('error', 'Code is required!');
+    }
+
+    const roomId = code.trim().toUpperCase();
     const room = rooms.get(roomId);
 
-    if (!room) return socket.emit('error', 'Hii room haipo bro!');
-    if (room.players.length >= 2) return socket.emit('error', 'Room imejaa!');
+    if (!room) return socket.emit('error', 'Room haipo!');
+    if (room.player2) return socket.emit('error', 'Room imejaa!');
 
     room.players.push(socket.id);
     room.player2 = socket.id;
-    socket.join(roomId);
-    socket.emit('roomJoined', roomId);
+    room.player2Name = (playerName || "Player 2").trim();
 
-    // SERVER SHUFFLES ONCE → SAME DECK FOR BOTH
+    socket.join(roomId);
+    socket.emit('roomJoined', { id: roomId, opponentName: room.player1Name });
+
+    // Notify first player that someone joined
+    socket.to(roomId).emit('opponentJoined', { opponentName: room.player2Name });
+
+    // START GAME
     const fullDeck = shuffle(createDeck());
     const player1Hand = fullDeck.splice(0, 4);
     const player2Hand = fullDeck.splice(0, 4);
-    const topCard = fullDeck.splice(0, 1)[0];
+    const topCard = fullDeck.pop();
 
     room.deck = fullDeck;
     room.topCard = topCard;
     room.player1Hand = player1Hand;
     room.player2Hand = player2Hand;
 
-    // SEND GAME STATE – OPPONENT HAND IS HIDDEN!
+    // Send game to both
     io.to(room.player1).emit('gameStart', {
       youAreFirst: true,
       deck: fullDeck.map(c => ({ suit: c.suit, num: c.num })),
       userHand: player1Hand.map(c => ({ suit: c.suit, num: c.num })),
-      opponentHand: Array(4).fill(null),           // ← HIDDEN
-      topCard: { suit: topCard.suit, num: topCard.num }
+      opponentHandCount: 4,
+      topCard: { suit: topCard.suit, num: topCard.num },
+      opponentName: room.player2Name
     });
 
     io.to(room.player2).emit('gameStart', {
       youAreFirst: false,
       deck: fullDeck.map(c => ({ suit: c.suit, num: c.num })),
       userHand: player2Hand.map(c => ({ suit: c.suit, num: c.num })),
-      opponentHand: Array(4).fill(null),           // ← HIDDEN
-      topCard: { suit: topCard.suit, num: topCard.num }
+      opponentHandCount: 4,
+      topCard: { suit: topCard.suit, num: topCard.num },
+      opponentName: room.player1Name
     });
 
-    console.log(`Game started → Room ${roomId} | Top: ${topCard.num}_${topCard.suit}`);
+    console.log(`Game started → ${room.player1Name} vs ${room.player2Name}`);
   });
 
-  // RELAY MOVES – HIDE PICKED CARDS FROM OPPONENT
+  // MOVE HANDLING
   socket.on('move', ({ roomId, move }) => {
     const room = rooms.get(roomId);
-    if (!room) return;
+    if (!room || !room.player2) return;
 
-    const opponentId = room.player1 === socket.id ? room.player2 : room.player1;
-    if (!opponentId) return;
+    const isPlayer1 = room.player1 === socket.id;
+    const opponentId = isPlayer1 ? room.player2 : room.player1;
 
     if (move.type === 'pick') {
-      // Only tell opponent HOW MANY cards were picked → no card data!
-      socket.to(opponentId).emit('opponentMove', { type: 'pick', num: move.num });
+      const num = move.num || 1;
+      if (room.deck.length < num) {
+        return socket.emit('error', 'Hakuna kadi za kutosha!');
+      }
+
+      const pickedCards = room.deck.splice(-num); // take from end
+
+      if (isPlayer1) room.player1Hand.push(...pickedCards);
+      else room.player2Hand.push(...pickedCards);
+
+      // Give real cards to the player who picked
+      socket.emit('yourPick', pickedCards.map(c => ({ suit: c.suit, num: c.num })));
+
+      // Send hidden cards to opponent
+      const hidden = Array(num).fill().map(() => ({ suit: null, num: null }));
+      io.to(opponentId).emit('opponentMove', { type: 'pick', cards: hidden });
+
+      // Sync remaining deck
+      io.in(roomId).emit('deckUpdate', {
+        remainingCards: room.deck.map(c => ({ suit: c.suit, num: c.num }))
+      });
+
     } else if (move.type === 'drop') {
-      // Dropping is public → send real cards
-      socket.to(opponentId).emit('opponentMove', move);
+      const cards = move.cards;
+      const hand = isPlayer1 ? room.player1Hand : room.player2Hand;
+
+      cards.forEach(card => {
+        const idx = hand.findIndex(c => c.suit === card.suit && c.num === card.num);
+        if (idx !== -1) hand.splice(idx, 1);
+      });
+
+      room.topCard = cards[cards.length - 1];
+
+      io.to(opponentId).emit('opponentMove', { type: 'drop', cards });
+      io.in(roomId).emit('deckUpdate', { remainingCards: room.deck.map(c => ({ suit: c.suit, num: c.num })) });
     }
   });
 
-  // Rematch (optional)
+  // REMATCH
   socket.on('rematch', ({ roomId }) => {
-    socket.to(roomId).emit('rematchRequest');
+    const room = rooms.get(roomId);
+    if (!room || !room.player2) return;
+
+    const fullDeck = shuffle(createDeck());
+    const p1 = fullDeck.splice(0, 4);
+    const p2 = fullDeck.splice(0, 4);
+    const top = fullDeck.pop();
+
+    room.deck = fullDeck;
+    room.topCard = top;
+    room.player1Hand = p1;
+    room.player2Hand = p2;
+
+    io.to(room.player1).emit('gameStart', {
+      youAreFirst: true,
+      deck: fullDeck.map(c => ({ suit: c.suit, num: c.num })),
+      userHand: p1.map(c => ({ suit: c.suit, num: c.num })),
+      opponentHandCount: 4,
+      topCard: { suit: top.suit, num: top.num },
+      opponentName: room.player2Name
+    });
+
+    io.to(room.player2).emit('gameStart', {
+      youAreFirst: false,
+      deck: fullDeck.map(c => ({ suit: c.suit, num: c.num })),
+      userHand: p2.map(c => ({ suit: c.suit, num: c.num })),
+      opponentHandCount: 4,
+      topCard: { suit: top.suit, num: top.num },
+      opponentName: room.player1Name
+    });
   });
 
+  // DISCONNECT
   socket.on('disconnect', () => {
     console.log('Player disconnected:', socket.id);
     for (const [roomId, room] of rooms.entries()) {
-      const idx = room.players.indexOf(socket.id);
-      if (idx !== -1) {
+      if (room.players.includes(socket.id)) {
         socket.to(roomId).emit('opponentLeft');
         rooms.delete(roomId);
         console.log(`Room ${roomId} deleted`);
@@ -129,12 +209,15 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORT = process.env.REACT_BASE_URL || 3001;
+// Auto-retry port if busy
+const PORT = process.env.PORT || 5000;
 server.listen(PORT, '0.0.0.0', () => {
-  console.log('='.repeat(70));
-  console.log('KADI 254 ONLINE – 100% FAIR, NO CHEATING, FULLY HIDDEN CARDS!');
-  console.log('='.repeat(70));
-  console.log(`Server running → http://localhost:${PORT}`);
-  console.log(`Phone/PC → http://YOUR_IP:${PORT}`);
-  console.log('='.repeat(70));
+  console.log(`Server running → http://localhost:${server.address().port}`);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.log(`Port ${PORT} busy → trying ${PORT + 1}`);
+    server.listen(PORT + 1, '0.0.0.0');
+  }
 });
