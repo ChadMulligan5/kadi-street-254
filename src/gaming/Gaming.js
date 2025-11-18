@@ -48,7 +48,7 @@ const Gaming = () => {
     });
 
     // Socket.IO connection
-    socketRef.current = io('http://localhost:3001'); // Change to your server
+    socketRef.current = io('https://kadi-street-254.vercel.app'); // Change to your server
 
     const socket = socketRef.current;
 
